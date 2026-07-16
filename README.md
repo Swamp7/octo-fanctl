@@ -1,6 +1,7 @@
 # octo-fanctl
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Shell Script](https://img.shields.io/badge/Bash-4EAA25?logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 
 A small, dependency-free fan controller for **Octominer** mining-chassis fan boards
 on a plain Linux host (built/tested on Ubuntu 24.04 with the NVIDIA driver).
