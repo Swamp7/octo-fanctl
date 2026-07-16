@@ -1,0 +1,18 @@
+[Unit]
+Description=Octominer chassis fan controller (GPU-driven, CPU override)
+Documentation=https://github.com/OWNER/octo-fanctl
+After=multi-user.target
+Wants=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/opt/octo-fanctl/octo-fanctl.sh
+# needs root: the Octominer USB node is writable only by root
+User=root
+Restart=always
+RestartSec=10
+# tidy journald lines (script already timestamps)
+SyslogIdentifier=octo-fanctl
+
+[Install]
+WantedBy=multi-user.target

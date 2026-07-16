@@ -1,0 +1,5 @@
+# local artifacts — not the bundled fan_controller_cli, which is intentionally tracked
+*.new
+*.tmp
+*.tgz
+*.swp

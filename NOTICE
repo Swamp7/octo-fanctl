@@ -1,0 +1,21 @@
+octo-fanctl — third-party component notice
+==========================================
+
+payload/fan_controller_cli
+--------------------------
+This file is the Octominer chassis fan-controller CLI. It self-identifies as:
+
+    "Fan Controller Cli (C)2019 by C_Payne."
+
+It is NOT the work of this project and is NOT covered by this repository's MIT
+license. It is the property of its original author (C_Payne / Octominer) and is
+redistributed here, unmodified and as-is, solely to make this fan-control wrapper
+usable out of the box on hosts equipped with an Octominer fan-controller board.
+
+  SHA256: d6dfcff8f5cc00f1652aaf616ab872396a8203bea0ce9a34e25bf723f8140bcd
+
+No warranty is provided for this binary. If you are the rights holder and want it
+removed, open an issue or contact the repository owner and it will be taken down
+promptly. If you prefer not to use the bundled copy, delete it and drop in the
+`fan_controller_cli` from your own Octominer / SimpleMining installation
+(typically /root/utils/octominer/fan_controller_cli).
