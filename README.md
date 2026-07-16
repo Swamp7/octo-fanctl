@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Shell Script](https://img.shields.io/badge/Bash-4EAA25?logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
+[![Platform: Linux](https://img.shields.io/badge/Platform-Linux-333333?logo=linux&logoColor=white)](https://www.kernel.org/)
 
 A small, dependency-free fan controller for **Octominer** mining-chassis fan boards
 on a plain Linux host (built/tested on Ubuntu 24.04 with the NVIDIA driver).
