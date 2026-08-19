@@ -115,8 +115,16 @@ board_present() { grep -qi 'Serial No' <<<"$1"; }
 
 # Run once at launch: write the board's "Default PWM" register (-d) so that when
 # the host stops driving the controller (idle/USB/host drop) the fans fall back to
-# DEFAULT_PWM_PCT, and optionally arm the watchdog so that fallback is actively
-# forced on a drop. EEPROM write — do NOT call this in the poll loop.
+# DEFAULT_PWM_PCT, and either arm the watchdog (if wanted) or explicitly disable
+# it. EEPROM write — do NOT call this in the poll loop.
+#
+# IMPORTANT: boards have been observed shipping with the watchdog ALREADY armed
+# from the factory (Watch-Dog Mode=1, short/long timeouts pre-set) even though
+# nothing here ever asked for it. Left alone, this causes the board to reset
+# itself on a fixed interval (observed: exactly every 504s / 8m24s on one unit)
+# independent of anything the host does -- invisible unless you're watching
+# dmesg for USB disconnects. So WATCHDOG_ENABLE=0 now actively DISABLES the
+# watchdog (-w 0 -v 0) rather than just leaving whatever state it was in.
 set_board_default() {
   local data=$1 i pwm out rc; pwm=$(pct_to_pwm "$DEFAULT_PWM_PCT")
   for i in $(present_fans <<<"$data"); do
@@ -125,8 +133,19 @@ set_board_default() {
   done
   log "board Default PWM set to ${DEFAULT_PWM_PCT}% (${pwm}) on all present fans"
   if (( WATCHDOG_ENABLE == 1 )); then
-    timeout 5 "$CLI" -w "$WATCHDOG_SHORT" -v "$WATCHDOG_LONG" >/dev/null 2>&1
-    log "watchdog armed: short=${WATCHDOG_SHORT}s long=${WATCHDOG_LONG}s"
+    out=$(timeout 5 "$CLI" -w "$WATCHDOG_SHORT" -v "$WATCHDOG_LONG" 2>&1); rc=$?
+    if (( rc != 0 )); then
+      log "WARN: watchdog arm FAILED (rc=$rc): $out"
+    else
+      log "watchdog armed: short=${WATCHDOG_SHORT}s long=${WATCHDOG_LONG}s"
+    fi
+  else
+    out=$(timeout 5 "$CLI" -w 0 -v 0 2>&1); rc=$?
+    if (( rc != 0 )); then
+      log "WARN: watchdog disable FAILED (rc=$rc): $out"
+    else
+      log "watchdog explicitly disabled (board may ship pre-armed from the factory)"
+    fi
   fi
 }
 
