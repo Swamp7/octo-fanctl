@@ -100,10 +100,15 @@ present_fans() {
 }
 
 set_all_fans() {
-  local pwm=$1 data=$2 i
+  local pwm=$1 data=$2 i out rc ok=1
   for i in $(present_fans <<<"$data"); do
-    timeout 5 "$CLI" -f "$i" -v "$pwm" >/dev/null 2>&1
+    out=$(timeout 5 "$CLI" -f "$i" -v "$pwm" 2>&1); rc=$?
+    if (( rc != 0 )); then
+      log "WARN: fan $i set to ${pwm} FAILED (rc=$rc): $out"
+      ok=0
+    fi
   done
+  (( ok == 1 ))
 }
 
 board_present() { grep -qi 'Serial No' <<<"$1"; }
@@ -113,9 +118,10 @@ board_present() { grep -qi 'Serial No' <<<"$1"; }
 # DEFAULT_PWM_PCT, and optionally arm the watchdog so that fallback is actively
 # forced on a drop. EEPROM write — do NOT call this in the poll loop.
 set_board_default() {
-  local data=$1 i pwm; pwm=$(pct_to_pwm "$DEFAULT_PWM_PCT")
+  local data=$1 i pwm out rc; pwm=$(pct_to_pwm "$DEFAULT_PWM_PCT")
   for i in $(present_fans <<<"$data"); do
-    timeout 5 "$CLI" -d "$i" -v "$pwm" >/dev/null 2>&1
+    out=$(timeout 5 "$CLI" -d "$i" -v "$pwm" 2>&1); rc=$?
+    (( rc != 0 )) && log "WARN: fan $i default-PWM set to ${pwm} FAILED (rc=$rc): $out"
   done
   log "board Default PWM set to ${DEFAULT_PWM_PCT}% (${pwm}) on all present fans"
   if (( WATCHDOG_ENABLE == 1 )); then
@@ -172,8 +178,12 @@ while :; do
   pwm=$(pct_to_pwm "$pct")
   # deadband: skip USB write unless the duty moved enough
   if (( last_pwm < 0 || pwm > last_pwm + WRITE_DEADBAND*255/100 || pwm < last_pwm - WRITE_DEADBAND*255/100 )); then
-    set_all_fans "$pwm" "$data"
-    last_pwm=$pwm
+    if set_all_fans "$pwm" "$data"; then
+      last_pwm=$pwm
+    else
+      log "WARN: one or more fans not confirmed at ${pwm} — will retry next cycle"
+      # last_pwm intentionally left unchanged so the deadband check retries next poll
+    fi
   fi
 
   sleep "$POLL_SECONDS"
