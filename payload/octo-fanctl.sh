@@ -31,6 +31,16 @@ CPU_OVERRIDE=1       # 0 disables the CPU override entirely
 FAILSAFE_PCT=100     # duty applied on daemon exit / when GPU temp unreadable
 WRITE_DEADBAND=2     # only push a new duty when it moves at least this many %
 
+MAX_PWM_PCT=100      # hard physical ceiling (0-100%), enforced in pct_to_pwm() so it
+                     # applies to EVERYTHING that goes to the board: the temp curve,
+                     # CPU override, FAILSAFE_PCT, and DEFAULT_PWM_PCT alike. For a
+                     # hardware quirk (e.g. resonance/vibration above a certain PWM on
+                     # a specific board) the temperature curve itself shouldn't need to
+                     # know about -- just cap the output instead of retuning the curve.
+                     # 100 = no extra cap. Example: bad vibration above ~230/255 (90%)
+                     # on one bench unit -> set MAX_PWM_PCT=90 in /etc/octo-fanctl.conf
+                     # on that host only; other boards are unaffected.
+
 DEFAULT_PWM_PCT=100      # the board's per-fan "Default PWM" register (-d, USB
                          # opcode WRITE_FAN_DEFAULT). Written once at launch. This is
                          # the value the controller falls back to when the host stops
@@ -47,7 +57,11 @@ WATCHDOG_LONG=732        # -w long timeout (s)
 
 log() { echo "$(date '+%F %T') $*"; }
 
-pct_to_pwm() { echo $(( $1 * 255 / 100 )); }
+pct_to_pwm() {
+  local pwm=$(( $1 * 255 / 100 )) cap=$(( MAX_PWM_PCT * 255 / 100 ))
+  (( pwm > cap )) && pwm=$cap
+  echo "$pwm"
+}
 
 clamp() { local v=$1 lo=$2 hi=$3; (( v < lo )) && v=$lo; (( v > hi )) && v=$hi; echo "$v"; }
 
@@ -195,6 +209,9 @@ while :; do
   fi
 
   pwm=$(pct_to_pwm "$pct")
+  # pct_to_pwm applies MAX_PWM_PCT internally; surface it here so the log never
+  # silently disagrees with what actually went to the board
+  (( MAX_PWM_PCT < 100 && pwm < pct * 255 / 100 )) && log "  (capped by MAX_PWM_PCT=${MAX_PWM_PCT}% -> pwm=${pwm})"
   # deadband: skip USB write unless the duty moved enough
   if (( last_pwm < 0 || pwm > last_pwm + WRITE_DEADBAND*255/100 || pwm < last_pwm - WRITE_DEADBAND*255/100 )); then
     if set_all_fans "$pwm" "$data"; then
